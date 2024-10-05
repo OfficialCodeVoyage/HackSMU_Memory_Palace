@@ -7,12 +7,63 @@
 :root {
   --font-poppins: 'Poppins', sans-serif;
   --font-roboto: 'Roboto', sans-serif;
+
+  /* Define global color variables */
+  --color-primary: #0077b6; /* Accessible blue */
+  --color-secondary: #00b4d8;
+  --color-background: #f1f5f9; /* Light gray for background */
+  --color-text-primary: #1a202c; /* Dark text for readability */
+  --color-text-secondary: #4a5568; /* Lighter text for subheadings */
 }
 
 body {
   font-family: var(--font-roboto);
+  background-color: var(--color-background);
+  color: var(--color-text-primary);
+  line-height: 1.6;
 }
 
 h1, h2, h3, h4, h5, h6 {
   font-family: var(--font-poppins);
+  color: var(--color-text-secondary);
+}
+
+/* Accessibility focus states */
+a:focus,
+button:focus,
+input:focus {
+  outline: 2px dashed var(--color-primary);
+  outline-offset: 2px;
+}
+
+/* Button hover and focus states for better user experience */
+button {
+  transition: background-color 0.3s ease, transform 0.2s ease;
+}
+
+button:hover {
+  background-color: var(--color-secondary);
+  transform: scale(1.05);
+}
+
+input {
+  transition: border-color 0.3s ease;
+}
+
+input:focus {
+  border-color: var(--color-primary);
+}
+
+/* Add subtle animations */
+@keyframes fadeIn {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+.fade-in {
+  animation: fadeIn 1s ease-in-out;
 }

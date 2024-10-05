@@ -1,11 +1,11 @@
 // frontend/src/context/AppContext.tsx
-'use client';
 
 import React, { createContext, useState, ReactNode } from 'react';
+import { Environment } from '../types'; // Correct path after moving
 
 interface AppContextProps {
-    selectedEnvironment: string | null;
-    setSelectedEnvironment: (env: string | null) => void;
+    selectedEnvironment: Environment | null;
+    setSelectedEnvironment: (env: Environment | null) => void;
 }
 
 export const AppContext = createContext<AppContextProps>({
@@ -18,7 +18,7 @@ interface AppProviderProps {
 }
 
 export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
-    const [selectedEnvironment, setSelectedEnvironment] = useState<string | null>(null);
+    const [selectedEnvironment, setSelectedEnvironment] = useState<Environment | null>(null);
 
     return (
         <AppContext.Provider value={{ selectedEnvironment, setSelectedEnvironment }}>
