@@ -1,9 +1,9 @@
-// frontend/src/app/displayimages/page.tsx
-
 'use client';
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { DndProvider, useDrag, useDrop } from 'react-dnd';
+import { HTML5Backend } from 'react-dnd-html5-backend';
 import Button from '../../components/common/Button';
 
 interface ImageWithLabel {
@@ -13,24 +13,109 @@ interface ImageWithLabel {
 
 interface ImageState extends ImageWithLabel {
     id: number;
-    x: number;
-    y: number;
-    dragging: boolean;
-    offsetX: number;
-    offsetY: number;
 }
 
-const DisplayImagesPage: React.FC = () => {
+type DragItem = {
+    id: number;
+    fromGroup: string | null;
+    type: 'image';
+};
+
+// Utility function to shuffle an array
+const shuffleArray = (array: ImageState[]) => {
+    for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]]; // Swap elements
+    }
+    return array;
+};
+
+const DraggableImage: React.FC<{ img: ImageState; fromGroup: string | null }> = ({ img, fromGroup }) => {
+    const [{ isDragging }, drag] = useDrag<DragItem, void, { isDragging: boolean }>(() => ({
+        type: 'image',
+        item: { id: img.id, fromGroup, type: 'image' },
+        collect: (monitor) => ({
+            isDragging: monitor.isDragging(),
+        }),
+    }));
+
+    return (
+        <div
+            ref={drag}
+            style={{ opacity: isDragging ? 0.5 : 1 }}
+            className="shadow-lg bg-white cursor-grab transition-all transform hover:scale-105"
+        >
+            <img
+                src={img.url}
+                alt={img.label}
+                className="rounded-md w-full h-[168px] object-cover shadow-sm transition-all duration-100 hover:scale-100"
+            />
+        </div>
+    );
+};
+
+const DropArea: React.FC<{
+    groupName: string;
+    onDrop: (id: number, fromGroup: string | null) => void;
+    images: ImageState[];
+}> = ({ groupName, onDrop, images }) => {
+    const [, drop] = useDrop<DragItem>(() => ({
+        accept: 'image',
+        canDrop: (item) => item.fromGroup !== groupName,
+        drop: (item) => onDrop(item.id, item.fromGroup),
+    }));
+
+    return (
+        <div
+            ref={drop}
+            className="w-72 min-h-[300px] border-4 border-dashed border-gray-400 rounded-lg flex flex-col items-center justify-start p-4 transition-colors duration-300 hover:border-blue-600 bg-gray-50"
+        >
+            <p className="text-xl font-medium text-gray-700 mb-2">{groupName}</p>
+            <div className="grid grid-cols-2 gap-2 w-full">
+                {images.map((img) => (
+                    <DraggableImage key={img.id} img={img} fromGroup={groupName} />
+                ))}
+            </div>
+        </div>
+    );
+};
+
+const MainDropArea: React.FC<{
+    onDrop: (id: number, fromGroup: string | null) => void;
+    images: ImageState[];
+}> = ({ onDrop, images }) => {
+    const [, drop] = useDrop<DragItem>(() => ({
+        accept: 'image',
+        canDrop: (item) => item.fromGroup !== null,
+        drop: (item) => {
+            if (item.fromGroup) {
+                onDrop(item.id, item.fromGroup);
+            }
+        },
+    }));
+
+    return (
+        <div
+            ref={drop}
+            className="relative flex justify-center items-center flex-nowrap overflow-x-auto gap-4 mb-12 min-h-[200px] border-2 border-dashed border-gray-200 rounded-lg p-4 bg-white"
+        >
+            {images.map((img) => (
+                <DraggableImage key={img.id} img={img} fromGroup={null} />
+            ))}
+        </div>
+    );
+};
+
+const DisplayImagesPageComponent: React.FC = () => {
     const router = useRouter();
     const [images, setImages] = useState<ImageState[]>([]);
-    const [currentImage, setCurrentImage] = useState<number | null>(null);
-    const [isDragging, setIsDragging] = useState<boolean>(false);
-    const [groups, setGroups] = useState<{ [groupName: string]: ImageState[] }>({});
+    const [groups, setGroups] = useState<{ [groupName: string]: ImageState[] }>({
+        'Group 1': [],
+        'Group 2': [],
+    });
 
-    // Predefined group areas (for example purposes)
     const predefinedGroups = ['Group 1', 'Group 2'];
 
-    // Retrieve images from localStorage on component mount
     useEffect(() => {
         const storedImages = localStorage.getItem('generatedImagesWithLabels');
         if (storedImages) {
@@ -40,184 +125,137 @@ const DisplayImagesPage: React.FC = () => {
                     id: index,
                     url: img.url,
                     label: img.label,
-                    x: 0,
-                    y: 0,
-                    dragging: false,
-                    offsetX: 0,
-                    offsetY: 0,
                 }));
-                setImages(initializedImages);
+
+                // Shuffle the images before setting them to state
+                setImages(shuffleArray(initializedImages));
             } catch (error) {
-                console.error('Error parsing generatedImagesWithLabels from localStorage:', error);
+                console.error('Error parsing images:', error);
                 router.push('/');
             }
         } else {
-            // If no images found, navigate back to home
             router.push('/');
         }
     }, [router]);
 
-    // Handle mouse down event to start dragging
-    const handleMouseDown = (index: number, e: React.MouseEvent<HTMLDivElement>) => {
-        e.preventDefault();
-        e.stopPropagation(); // Prevent event bubbling to parent elements
+    const handleDrop = (groupName: string, id: number, fromGroup: string | null) => {
+        const draggedImage = fromGroup
+            ? groups[fromGroup].find((img) => img.id === id)
+            : images.find((img) => img.id === id);
 
-        const imgElement = e.currentTarget.getBoundingClientRect();
-        const offsetX = e.clientX - imgElement.left;
-        const offsetY = e.clientY - imgElement.top;
+        if (draggedImage) {
+            if (fromGroup) {
+                // Remove from the original group
+                setGroups((prevGroups) => ({
+                    ...prevGroups,
+                    [fromGroup]: prevGroups[fromGroup].filter((img) => img.id !== id),
+                }));
+            } else {
+                // Remove from the main images list
+                setImages((prevImages) => prevImages.filter((img) => img.id !== id));
+            }
 
-        setImages(prevImages =>
-            prevImages.map((img, i) =>
-                i === index ? { ...img, dragging: true, offsetX, offsetY } : img
-            )
-        );
-        setCurrentImage(index);
-        setIsDragging(true);
-    };
-
-    // Handle mouse move event to drag the image
-    const handleMouseMove = (e: MouseEvent) => {
-        if (isDragging && currentImage !== null) {
-            setImages(prevImages =>
-                prevImages.map((img, i) =>
-                    i === currentImage
-                        ? {
-                            ...img,
-                            x: e.clientX - img.offsetX,
-                            y: e.clientY - img.offsetY,
-                        }
-                        : img
-                )
-            );
+            // Add to the new group
+            setGroups((prevGroups) => ({
+                ...prevGroups,
+                [groupName]: [...(prevGroups[groupName] || []), draggedImage],
+            }));
         }
     };
 
-    // Handle mouse up event to stop dragging
-    const handleMouseUp = () => {
-        if (isDragging && currentImage !== null) {
-            setImages(prevImages =>
-                prevImages.map((img, i) =>
-                    i === currentImage ? { ...img, dragging: false } : img
-                )
-            );
-        }
-        setIsDragging(false);
-        setCurrentImage(null);
-    };
-
-    // Add and remove event listeners for mouse move and up
-    useEffect(() => {
-        if (isDragging) {
-            document.addEventListener('mousemove', handleMouseMove);
-            document.addEventListener('mouseup', handleMouseUp);
-        } else {
-            document.removeEventListener('mousemove', handleMouseMove);
-            document.removeEventListener('mouseup', handleMouseUp);
-        }
-
-        return () => {
-            document.removeEventListener('mousemove', handleMouseMove);
-            document.removeEventListener('mouseup', handleMouseUp);
-        };
-    }, [isDragging, currentImage]);
-
-    // Handle dropping images into group areas
-    const handleDrop = (groupName: string, e: React.DragEvent<HTMLDivElement>) => {
-        e.preventDefault();
-        if (currentImage !== null) {
-            const draggedImage = images[currentImage];
-            setGroups(prevGroups => {
-                const updatedGroups = { ...prevGroups };
-                if (!updatedGroups[groupName]) {
-                    updatedGroups[groupName] = [];
-                }
-                updatedGroups[groupName].push(draggedImage);
-                return updatedGroups;
-            });
-            setImages(prevImages => prevImages.filter((img, i) => i !== currentImage));
-            setIsDragging(false);
-            setCurrentImage(null);
+    const handleDropToMain = (id: number, fromGroup: string | null) => {
+        if (fromGroup) {
+            const draggedImage = groups[fromGroup].find((img) => img.id === id);
+            if (draggedImage) {
+                // Remove from the group
+                setGroups((prevGroups) => ({
+                    ...prevGroups,
+                    [fromGroup]: prevGroups[fromGroup].filter((img) => img.id !== id),
+                }));
+                // Add back to main images
+                setImages((prevImages) => [...prevImages, draggedImage]);
+            }
         }
     };
 
-    // Allow dropping by preventing default behavior
-    const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
-        e.preventDefault();
-    };
-
-    // Handle submission of groups
     const handleSubmitGroups = () => {
-        // Placeholder for group submission logic
-        // For example, you can send the groups data to the backend or save it locally
         console.log('Groups:', groups);
         alert('Groups submitted successfully!');
-        // Optionally, clear the stored images
         localStorage.removeItem('generatedImagesWithLabels');
-        // Navigate back to home or another page
         router.push('/');
     };
 
+    const handleGoToMainPage = () => {
+        router.push('/');
+    };
+
+    const handleTryDifferentEnvironment = () => {
+        router.push('/try-different-environment');
+    };
+
     return (
-        <div className="container mx-auto px-4 py-8">
-            <h2 className="text-3xl font-bold mb-4 text-center">Memory Exercise: Group Images</h2>
-            <p className="text-center mb-6">Drag and drop the images into your own groupings!</p>
+        <DndProvider backend={HTML5Backend}>
+            <div className="container mx-auto px-4 py-8">
+                <h2 className="text-4xl font-bold mb-6 text-center text-blue-700">
+                    Memory Exercise: Group Images
+                </h2>
+                <p className="text-center mb-10 text-lg text-gray-600">
+                    Drag and drop the images into your own groupings!
+                </p>
 
-            <div className="flex flex-wrap justify-center gap-4 mb-8">
-                {images.map((img, index) => (
-                    <div
-                        key={img.id}
-                        className="border rounded-lg shadow-md p-2 bg-white cursor-grab"
-                        style={{
-                            width: '150px',
-                            textAlign: 'center',
-                            position: 'absolute',
-                            left: img.x,
-                            top: img.y,
-                            zIndex: img.dragging ? 1000 : 1,
-                            userSelect: 'none',
-                        }}
-                        onMouseDown={(e) => handleMouseDown(index, e)}
-                        draggable
-                        onDragStart={(e) => e.preventDefault()} // Prevent default drag behavior
-                    >
-                        <img
-                            src={img.url}
-                            alt={img.label}
-                            className="rounded"
-                            style={{ width: '100%', height: '100px', objectFit: 'cover' }}
+                {/* Main Drop Area (initially in one row, centered) */}
+                <MainDropArea onDrop={handleDropToMain} images={images} />
+
+                {/* Drop Areas (2x2 grid layout after drop) */}
+                <div className="flex justify-center gap-8 mb-12">
+                    {predefinedGroups.map((group) => (
+                        <DropArea
+                            key={group}
+                            groupName={group}
+                            onDrop={(id, fromGroup) => handleDrop(group, id, fromGroup)}
+                            images={groups[group] || []}
                         />
-                        <div
-                            className="mt-2 text-red-700 font-semibold"
-                            style={{
-                                transition: 'color 0.3s',
-                            }}
-                        >
-                            {img.label}
-                        </div>
-                    </div>
-                ))}
-            </div>
+                    ))}
+                </div>
 
-            <div className="flex justify-center gap-4 mb-8">
-                {predefinedGroups.map((group, index) => (
-                    <div
-                        key={index}
-                        className="w-64 h-64 border-2 border-dashed border-gray-400 rounded-lg flex flex-col items-center justify-center"
-                        onDrop={(e) => handleDrop(group, e)}
-                        onDragOver={handleDragOver}
+
+
+                {/* Submit Button */}
+                <div className="flex justify-center mt-8 space-x-4">
+                    <Button
+                        variant="primary"
+                        size="large"
+                        onClick={handleSubmitGroups}
+                        className="transition-all transform hover:scale-105"
                     >
-                        <p className="text-xl font-medium">{group}</p>
-                    </div>
-                ))}
-            </div>
+                        Submit Groups
+                    </Button>
 
-            <div className="flex justify-center mt-4">
-                <Button variant="primary" size="medium" onClick={handleSubmitGroups}>
-                    Submit Groups
-                </Button>
+                    {/* Button for Main Page */}
+                    <Button
+                        variant="secondary"
+                        size="large"
+                        onClick={handleGoToMainPage}
+                        className="transition-all transform hover:scale-105"
+                    >
+                        Main Page
+                    </Button>
+
+                    {/* Button for Try Different Environment */}
+                    <Button
+                        variant="secondary"
+                        size="large"
+                        onClick={() => router.push('/environments/4')}
+                        className="transition-all transform hover:scale-105"
+                    >
+
+
+                        Try Different Environment
+                    </Button>
+                </div>
             </div>
-        </div>
+        </DndProvider>
     );
 };
 
-export default DisplayImagesPage;
+export default DisplayImagesPageComponent;

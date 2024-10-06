@@ -1,5 +1,3 @@
-// frontend/src/app/environments/[id]/page.tsx
-
 'use client';
 
 import React, { useEffect, useState } from 'react';
@@ -7,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { environments } from '../../../data/environments';
 import Button from '../../../components/common/Button';
+import { FaSpinner } from 'react-icons/fa';
 
 interface CategoryResponse {
     category: string;
@@ -24,23 +23,26 @@ const EnvironmentPage: React.FC = () => {
     const router = useRouter();
     const [input, setInput] = useState<string>('');
     const [submittedWords, setSubmittedWords] = useState<string[]>([]);
+    const [hasSubmitted, setHasSubmitted] = useState<boolean>(false);
     const [loading, setLoading] = useState<boolean>(false);
     const [error, setError] = useState<string | null>(null);
 
     const environmentId = Number(id);
     const environment = environments.find((env) => env.id === environmentId);
 
+    // Load submitted words from localStorage
     useEffect(() => {
-        // Load submitted words from localStorage when the component mounts
         const storedWords = localStorage.getItem(`submittedWords-${environmentId}`);
         if (storedWords) {
             setSubmittedWords(JSON.parse(storedWords));
         }
     }, [environmentId]);
 
+    // Save submitted words to localStorage
     useEffect(() => {
-        // Save submitted words to localStorage whenever they change
-        localStorage.setItem(`submittedWords-${environmentId}`, JSON.stringify(submittedWords));
+        if (submittedWords.length > 0) {
+            localStorage.setItem(`submittedWords-${environmentId}`, JSON.stringify(submittedWords));
+        }
     }, [submittedWords, environmentId]);
 
     if (!environment) {
@@ -54,21 +56,26 @@ const EnvironmentPage: React.FC = () => {
         );
     }
 
+    // Handle form submission
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (input.trim() !== '') {
-            // Split input by commas and trim spaces
-            const words = input.split(',').map(word => word.trim()).filter(word => word !== '');
+        if (input.trim()) {
+            const words = input
+                .split(',')
+                .map((word) => word.trim())
+                .filter((word) => word !== '');
             if (words.length === 0) {
                 alert('Please enter at least one word.');
                 return;
             }
             setSubmittedWords(words);
             setInput('');
+            setHasSubmitted(true); // Set this to true after submission
             await sendWordsToBackend(words);
         }
     };
 
+    // Send words to the backend API
     const sendWordsToBackend = async (words: string[]) => {
         setLoading(true);
         setError(null);
@@ -78,9 +85,7 @@ const EnvironmentPage: React.FC = () => {
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({
-                    words: words,
-                }),
+                body: JSON.stringify({ words }),
             });
 
             if (!response.ok) {
@@ -91,26 +96,16 @@ const EnvironmentPage: React.FC = () => {
             const data = await response.json();
             const categoriesData: CategoryResponse[] = data.categories;
 
-            // Extract image URLs with labels
-            const imagesWithLabels: ImageWithLabel[] = [];
-
-            categoriesData.forEach((category) => {
-                const categoryName = category.category;
-                const words = category.words;
-                words.forEach((word) => {
+            const imagesWithLabels: ImageWithLabel[] = categoriesData.flatMap((category) =>
+                category.words.map((word) => {
                     const imageUrl = category.images[word];
-                    if (imageUrl) {
-                        imagesWithLabels.push({ url: imageUrl, label: categoryName });
-                    }
-                });
-            });
+                    return imageUrl ? { url: imageUrl, label: category.category } : null;
+                }).filter(Boolean) as ImageWithLabel[]
+            );
 
-            // Store image URLs with labels in localStorage
             localStorage.setItem('generatedImagesWithLabels', JSON.stringify(imagesWithLabels));
-
-            // Navigate to displayimages page
             router.push('/displayimages');
-        } catch (err: never) {
+        } catch (err: any) {
             console.error(err);
             setError(err.message || 'An error occurred.');
         } finally {
@@ -119,36 +114,85 @@ const EnvironmentPage: React.FC = () => {
     };
 
     return (
-        <div className="container mx-auto px-4 py-8 flex flex-col items-center">
-            <h1 className="text-3xl font-bold mb-6">{environment.name}</h1>
-            <div className="w-full max-w-md">
-                <Image
-                    src={environment.image}
-                    alt={`${environment.name} Image`}
-                    width={600}
-                    height={400}
-                    className="w-full h-auto rounded-lg shadow-md"
-                />
+        <div className="min-h-screen bg-gradient-to-b from-white to-gray-100 flex items-center justify-center">
+            <div className="container mx-auto px-6 py-12 pb-36">
+                {/* Two-column layout in a hero section */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+                    {/* Left Column: Image */}
+                    <div className="flex justify-center">
+                        <Image
+                            src={environment.image}
+                            alt={`${environment.name} Image`}
+                            width={800} // Larger image
+                            height={533} // Aspect ratio maintained
+                            className="rounded-lg shadow-lg"
+                        />
+                    </div>
+
+                    {/* Right Column: Form and Text */}
+                    <div className="bg-white rounded-lg shadow-lg p-8 flex flex-col justify-center text-left"> {/* Left-aligned text */}
+                        <h1 className="text-4xl font-bold text-gray-900 mb-6">Welcome to the {environment.name}!</h1>
+                        <p className="text-lg text-gray-700 mb-6">
+                            Enter words related to this environment (e.g., objects or items you might find here), and we'll generate an interactive experience based on those words.
+                        </p>
+
+                        <form onSubmit={handleSubmit} className="w-full max-w-lg">
+                            <input
+                                type="text"
+                                id="word-input"
+                                value={input}
+                                onChange={(e) => setInput(e.target.value)}
+                                className="w-full px-4 py-2 mb-4 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm"
+                                placeholder="e.g., Apple, Fork, Table, Animal"
+                                required
+                            />
+                            <Button
+                                variant="primary"
+                                size="large"
+                                type="submit"
+                                className="w-full bg-blue-600 text-white px-4 py-2 rounded-md shadow-md hover:bg-blue-700 transition-colors"
+                            >
+                                Submit
+                            </Button>
+
+                        </form>
+
+                        {/* Show submitted words only after submission */}
+                        {hasSubmitted && submittedWords.length > 0 && (
+                            <SubmittedWordsList submittedWords={submittedWords} />
+                        )}
+
+                        {/* Show loading spinner */}
+                        {loading && (
+                            <div className="mt-6 text-blue-500 flex items-center">
+                                <FaSpinner className="animate-spin mr-2" /> Processing...
+                            </div>
+                        )}
+
+                        {/* Show error message */}
+                        {error && <p className="mt-4 text-red-500 font-semibold">{error}</p>}
+                    </div>
+                </div>
             </div>
-            <form onSubmit={handleSubmit} className="w-full max-w-md mt-6">
-                <label htmlFor="word-input" className="block text-lg font-medium mb-2">
-                    Enter words related to {environment.name} (separated by commas):
-                </label>
-                <input
-                    type="text"
-                    id="word-input"
-                    value={input}
-                    onChange={(e) => setInput(e.target.value)}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder={`e.g., Apple, Banana, Carrot`}
-                    required
-                />
-                <Button variant="primary" size="medium" type="submit" className="mt-4 w-full">
-                    Submit
-                </Button>
-            </form>
-            {loading && <p className="mt-4 text-blue-500">Processing...</p>}
-            {error && <p className="mt-4 text-red-500">{error}</p>}
+        </div>
+    );
+};
+
+// Extract SubmittedWordsList into a reusable component
+const SubmittedWordsList: React.FC<{ submittedWords: string[] }> = ({ submittedWords }) => {
+    return (
+        <div className="w-full max-w-lg mt-6 bg-white rounded-lg p-4 shadow-md">
+            <h2 className="text-lg font-semibold mb-2 text-gray-800">Submitted Words:</h2>
+            <div className="flex flex-wrap gap-2">
+                {submittedWords.map((word, index) => (
+                    <span
+                        key={index}
+                        className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-medium"
+                    >
+                        {word}
+                    </span>
+                ))}
+            </div>
         </div>
     );
 };

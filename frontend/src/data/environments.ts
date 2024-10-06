@@ -22,14 +22,14 @@ export const environments: Environment[] = [
     },
     {
         id: 3,
-        name: 'Library',
-        image: '/images/library.png',
-        description: 'Improve your memory with book and library-inspired challenges.',
+        name: 'School',
+        image: '/images/school1.png',
+        description: 'Improve your memory with book and school-inspired challenges.',
     },
     {
         id: 4,
         name: 'Office',
-        image: '/images/office.png',
+        image: '/images/office1.png',
         description: 'Strengthen your cognitive abilities with office-based activities.',
     },
 ];

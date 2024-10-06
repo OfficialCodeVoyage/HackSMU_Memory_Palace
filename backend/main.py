@@ -65,7 +65,7 @@ def categorize_and_generate_images():
             # categorization
             messages = [system_message, categorize_message]
             chat = openai.ChatCompletion.create(
-                model="gpt-3.5-turbo",
+                model="gpt-4",
                 messages=messages
             )
             reply = chat['choices'][0]['message']['content']
@@ -174,7 +174,7 @@ def category_images(categories_data):
                 # Together API to generate image
                 response = together_client.images.generate(
                     prompt=prompt,
-                    model="black-forest-labs/FLUX.1-schnell",
+                    model="black-forest-labs/FLUX.1-pro",
                     steps=10,
                     n=1,
                     height=512,
