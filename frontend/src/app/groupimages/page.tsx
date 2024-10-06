@@ -6,20 +6,33 @@ import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 
 const GroupImagesPage: React.FC = () => {
-    // Mock images related to an environment (e.g., kitchen and farm items)
-    const images = [
-        '/images/farm.png',
-        '/images/farm.png',
-        '/images/farm.png',
-        '/images/kitchen.png',
-        '/images/kitchen.png',
-        '/images/kitchen.png'
-    ];
+    // Mock database of images and their categories
+    const itemDatabase = {
+        fruits: ['apple', 'grape', 'orange', 'mango'],
+        utensils: ['knife', 'spoon', 'plate', 'cup'],
+    };
 
-    const [imageStates, setImageStates] = useState(
-        images.map(() => ({ x: 0, y: 0, dragging: false, group: null }))
-    );
+    const [images, setImages] = useState<string[]>([]);
+    const [imageStates, setImageStates] = useState<any[]>([]);
     const [isGroupedCorrectly, setIsGroupedCorrectly] = useState(false);
+
+    // User input for categories
+    const [userInput, setUserInput] = useState({ fruit: '', utensil: '' });
+
+    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const { name, value } = e.target;
+        setUserInput((prevState) => ({ ...prevState, [name]: value }));
+    };
+
+    const generateItems = () => {
+        // Generate 4 items for each category based on input
+        const generatedFruits = itemDatabase.fruits.slice(0, 4);
+        const generatedUtensils = itemDatabase.utensils.slice(0, 4);
+
+        const newImages = [...generatedFruits, ...generatedUtensils];
+        setImages(newImages);
+        setImageStates(newImages.map(() => ({ x: 0, y: 0, dragging: false })));
+    };
 
     const handleMouseDown = (index: number, e: React.MouseEvent<HTMLImageElement>) => {
         e.stopPropagation();
@@ -53,27 +66,23 @@ const GroupImagesPage: React.FC = () => {
     };
 
     const checkGrouping = () => {
-        // Mock check: Check if kitchen images and farm images are grouped close together
-        const kitchenGroup = imageStates.filter((state, index) => images[index].includes('knife') || images[index].includes('fork'));
-        const farmGroup = imageStates.filter((state, index) => images[index].includes('elephant') || images[index].includes('giraffe'));
+        // Check if images are grouped correctly (fruit vs. utensils)
+        const fruits = imageStates.filter((state, index) => itemDatabase.fruits.includes(images[index]));
+        const utensils = imageStates.filter((state, index) => itemDatabase.utensils.includes(images[index]));
 
-        const isKitchenGrouped = kitchenGroup.every(
+        const isFruitsGrouped = fruits.every(
             (state) =>
-                Math.abs(state.x - kitchenGroup[0].x) < 100 &&
-                Math.abs(state.y - kitchenGroup[0].y) < 100
+                Math.abs(state.x - fruits[0].x) < 100 &&
+                Math.abs(state.y - fruits[0].y) < 100
         );
 
-        const isFarmGrouped = farmGroup.every(
+        const isUtensilsGrouped = utensils.every(
             (state) =>
-                Math.abs(state.x - farmGroup[0].x) < 100 &&
-                Math.abs(state.y - farmGroup[0].y) < 100
+                Math.abs(state.x - utensils[0].x) < 100 &&
+                Math.abs(state.y - utensils[0].y) < 100
         );
 
-        if (isKitchenGrouped && isFarmGrouped) {
-            setIsGroupedCorrectly(true);
-        } else {
-            setIsGroupedCorrectly(false);
-        }
+        setIsGroupedCorrectly(isFruitsGrouped && isUtensilsGrouped);
     };
 
     useEffect(() => {
@@ -90,13 +99,35 @@ const GroupImagesPage: React.FC = () => {
             <header className="text-center mb-8">
                 <h1 className="text-4xl font-bold">Digital Memory Playground</h1>
             </header>
+
+            {/* Input form */}
             <div className="text-center mb-6">
-                <h2 className="text-2xl font-semibold mb-2">Instructions</h2>
-                <p className="text-lg">Drag and drop the images to group them according to their category. There are two categories: kitchen items and farm items. Make sure all items from each category are placed close together in the designated drop zones. Once you group them correctly, you'll see buttons to proceed.</p>
+                <h2 className="text-2xl font-semibold mb-2">Enter Items</h2>
+                <input
+                    type="text"
+                    name="fruit"
+                    value={userInput.fruit}
+                    onChange={handleInputChange}
+                    placeholder="Enter a fruit"
+                    className="mb-2 px-4 py-2 border"
+                />
+                <input
+                    type="text"
+                    name="utensil"
+                    value={userInput.utensil}
+                    onChange={handleInputChange}
+                    placeholder="Enter a utensil"
+                    className="mb-4 px-4 py-2 border"
+                />
+                <button className="bg-blue-500 text-white py-2 px-6 rounded" onClick={generateItems}>
+                    Generate Items
+                </button>
             </div>
+
+            {/* Image Display */}
             <div className="flex justify-center gap-8 mb-8">
                 <div className="w-1/4 border-2 border-dashed border-gray-400 p-4 h-[300px] flex items-start justify-center">
-                    <p className="text-gray-500 mb-2">Kitchen Items Area</p>
+                    <p className="text-gray-500 mb-2">Fruit Area</p>
                 </div>
                 <div className="w-1/2 grid grid-cols-3 gap-8">
                     {images.map((imageUrl, index) => (
@@ -109,7 +140,7 @@ const GroupImagesPage: React.FC = () => {
                             }}
                         >
                             <Image
-                                src={imageUrl}
+                                src={`/images/${imageUrl}.png`} // Adjust based on your image path
                                 alt={`Image ${index}`}
                                 width={150}
                                 height={150}
@@ -128,31 +159,17 @@ const GroupImagesPage: React.FC = () => {
                     ))}
                 </div>
                 <div className="w-1/4 border-2 border-dashed border-gray-400 p-4 h-[300px] flex items-start justify-center">
-                    <p className="text-gray-500 mb-2">Farm Items Area</p>
+                    <p className="text-gray-500 mb-2">Utensils Area</p>
                 </div>
             </div>
+
             <div className="flex gap-4 justify-center mt-8">
                 <button
-                    className={`bg-blue-500 text-white py-2 px-6 rounded hover:bg-blue-600 mr-4 ${
-                        isGroupedCorrectly ? '' : 'opacity-50 cursor-not-allowed'
-                    }`}
+                    className={`bg-blue-500 text-white py-2 px-6 rounded hover:bg-blue-600 mr-4 ${isGroupedCorrectly ? '' : 'opacity-50 cursor-not-allowed'}`}
                     onClick={() => window.location.href = `/environments/${Math.floor(Math.random() * 4) + 1}`}
                     disabled={!isGroupedCorrectly}
                 >
                     Try a New Scene
-                </button>
-                <button
-                    className={`bg-purple-500 text-white py-2 px-6 rounded hover:bg-purple-600 ${
-                        isGroupedCorrectly ? '' : 'opacity-50 cursor-not-allowed'
-                    }`}
-                    onClick={() => {
-                        const doubledImages = [...images, ...images];
-                        setImageStates(doubledImages.map(() => ({ x: 0, y: 0, dragging: false, group: null })));
-                        setIsGroupedCorrectly(false);
-                    }}
-                    disabled={!isGroupedCorrectly}
-                >
-                    Make it Harder
                 </button>
             </div>
             <footer className="text-center mt-8">

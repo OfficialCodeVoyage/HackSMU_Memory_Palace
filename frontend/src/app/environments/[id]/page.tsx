@@ -8,6 +8,17 @@ import Image from 'next/image';
 import { environments } from '../../../data/environments';
 import Button from '../../../components/common/Button';
 
+interface CategoryResponse {
+    category: string;
+    words: string[];
+    images: { [word: string]: string | null };
+}
+
+interface ImageWithLabel {
+    url: string;
+    label: string;
+}
+
 const EnvironmentPage: React.FC = () => {
     const { id } = useParams();
     const router = useRouter();
@@ -49,10 +60,10 @@ const EnvironmentPage: React.FC = () => {
             // Split input by commas and trim spaces
             const words = input.split(',').map(word => word.trim()).filter(word => word !== '');
             if (words.length === 0) {
-                alert('Please enter at least one valid word.');
+                alert('Please enter at least one word.');
                 return;
             }
-            setSubmittedWords((prevWords) => [...prevWords, ...words]);
+            setSubmittedWords(words);
             setInput('');
             await sendWordsToBackend(words);
         }
@@ -78,18 +89,28 @@ const EnvironmentPage: React.FC = () => {
             }
 
             const data = await response.json();
-            // Extract image URLs from data.categories
-            const imageUrls: string[] = [];
-            data.categories.forEach((category: any) => {
-                Object.values(category.images).forEach((url: string) => {
-                    if (url) imageUrls.push(url);
+            const categoriesData: CategoryResponse[] = data.categories;
+
+            // Extract image URLs with labels
+            const imagesWithLabels: ImageWithLabel[] = [];
+
+            categoriesData.forEach((category) => {
+                const categoryName = category.category;
+                const words = category.words;
+                words.forEach((word) => {
+                    const imageUrl = category.images[word];
+                    if (imageUrl) {
+                        imagesWithLabels.push({ url: imageUrl, label: categoryName });
+                    }
                 });
             });
-            // Store image URLs in localStorage
-            localStorage.setItem('generatedImages', JSON.stringify(imageUrls));
+
+            // Store image URLs with labels in localStorage
+            localStorage.setItem('generatedImagesWithLabels', JSON.stringify(imagesWithLabels));
+
             // Navigate to displayimages page
             router.push('/displayimages');
-        } catch (err: any) {
+        } catch (err: never) {
             console.error(err);
             setError(err.message || 'An error occurred.');
         } finally {
@@ -111,7 +132,7 @@ const EnvironmentPage: React.FC = () => {
             </div>
             <form onSubmit={handleSubmit} className="w-full max-w-md mt-6">
                 <label htmlFor="word-input" className="block text-lg font-medium mb-2">
-                    Type words related to {environment.name} (separated by commas):
+                    Enter words related to {environment.name} (separated by commas):
                 </label>
                 <input
                     type="text"
@@ -119,7 +140,7 @@ const EnvironmentPage: React.FC = () => {
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
                     className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder={`e.g., Fork, Spoon, Banana`}
+                    placeholder={`e.g., Apple, Banana, Carrot`}
                     required
                 />
                 <Button variant="primary" size="medium" type="submit" className="mt-4 w-full">

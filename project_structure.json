@@ -1,6 +1,7 @@
 {
     "files": [
         ".gitignore",
+        "project_structure.json",
         "project_structure.py",
         "README.md"
     ],
@@ -15,6 +16,7 @@
     },
     "frontend": {
         "files": [
+            ".env.local",
             ".eslintrc.json",
             ".gitignore",
             "next-env.d.ts",

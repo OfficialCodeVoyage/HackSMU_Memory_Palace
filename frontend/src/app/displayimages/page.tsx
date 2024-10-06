@@ -6,9 +6,13 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Button from '../../components/common/Button';
 
-interface ImageState {
-    id: number;
+interface ImageWithLabel {
     url: string;
+    label: string;
+}
+
+interface ImageState extends ImageWithLabel {
+    id: number;
     x: number;
     y: number;
     dragging: boolean;
@@ -21,16 +25,21 @@ const DisplayImagesPage: React.FC = () => {
     const [images, setImages] = useState<ImageState[]>([]);
     const [currentImage, setCurrentImage] = useState<number | null>(null);
     const [isDragging, setIsDragging] = useState<boolean>(false);
+    const [groups, setGroups] = useState<{ [groupName: string]: ImageState[] }>({});
+
+    // Predefined group areas (for example purposes)
+    const predefinedGroups = ['Group 1', 'Group 2'];
 
     // Retrieve images from localStorage on component mount
     useEffect(() => {
-        const storedImages = localStorage.getItem('generatedImages');
+        const storedImages = localStorage.getItem('generatedImagesWithLabels');
         if (storedImages) {
             try {
-                const parsedImages: string[] = JSON.parse(storedImages);
-                const initializedImages: ImageState[] = parsedImages.map((url, index) => ({
+                const parsedImages: ImageWithLabel[] = JSON.parse(storedImages);
+                const initializedImages: ImageState[] = parsedImages.map((img, index) => ({
                     id: index,
-                    url: url,
+                    url: img.url,
+                    label: img.label,
                     x: 0,
                     y: 0,
                     dragging: false,
@@ -39,7 +48,7 @@ const DisplayImagesPage: React.FC = () => {
                 }));
                 setImages(initializedImages);
             } catch (error) {
-                console.error('Error parsing generatedImages from localStorage:', error);
+                console.error('Error parsing generatedImagesWithLabels from localStorage:', error);
                 router.push('/');
             }
         } else {
@@ -49,7 +58,7 @@ const DisplayImagesPage: React.FC = () => {
     }, [router]);
 
     // Handle mouse down event to start dragging
-    const handleMouseDown = (index: number, e: React.MouseEvent<HTMLImageElement>) => {
+    const handleMouseDown = (index: number, e: React.MouseEvent<HTMLDivElement>) => {
         e.preventDefault();
         e.stopPropagation(); // Prevent event bubbling to parent elements
 
@@ -112,13 +121,38 @@ const DisplayImagesPage: React.FC = () => {
         };
     }, [isDragging, currentImage]);
 
+    // Handle dropping images into group areas
+    const handleDrop = (groupName: string, e: React.DragEvent<HTMLDivElement>) => {
+        e.preventDefault();
+        if (currentImage !== null) {
+            const draggedImage = images[currentImage];
+            setGroups(prevGroups => {
+                const updatedGroups = { ...prevGroups };
+                if (!updatedGroups[groupName]) {
+                    updatedGroups[groupName] = [];
+                }
+                updatedGroups[groupName].push(draggedImage);
+                return updatedGroups;
+            });
+            setImages(prevImages => prevImages.filter((img, i) => i !== currentImage));
+            setIsDragging(false);
+            setCurrentImage(null);
+        }
+    };
+
+    // Allow dropping by preventing default behavior
+    const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+        e.preventDefault();
+    };
+
     // Handle submission of groups
     const handleSubmitGroups = () => {
         // Placeholder for group submission logic
-        // You can implement grouping logic here or send data to backend
+        // For example, you can send the groups data to the backend or save it locally
+        console.log('Groups:', groups);
         alert('Groups submitted successfully!');
         // Optionally, clear the stored images
-        localStorage.removeItem('generatedImages');
+        localStorage.removeItem('generatedImagesWithLabels');
         // Navigate back to home or another page
         router.push('/');
     };
@@ -126,31 +160,58 @@ const DisplayImagesPage: React.FC = () => {
     return (
         <div className="container mx-auto px-4 py-8">
             <h2 className="text-3xl font-bold mb-4 text-center">Memory Exercise: Group Images</h2>
-            <p className="text-center mb-6">Drag and drop the images to group them based on your memory exercise.</p>
-            <div className="relative w-full h-screen border border-gray-300">
+            <p className="text-center mb-6">Drag and drop the images into your own groupings!</p>
+
+            <div className="flex flex-wrap justify-center gap-4 mb-8">
                 {images.map((img, index) => (
-                    <img
+                    <div
                         key={img.id}
-                        src={img.url}
-                        alt={`Generated Image ${index + 1}`}
-                        className="absolute cursor-grab"
+                        className="border rounded-lg shadow-md p-2 bg-white cursor-grab"
                         style={{
-                            left: `${img.x}px`,
-                            top: `${img.y}px`,
                             width: '150px',
-                            height: '150px',
-                            objectFit: 'cover',
-                            borderRadius: '8px',
-                            boxShadow: img.dragging ? '0px 0px 10px rgba(0,0,0,0.5)' : 'none',
+                            textAlign: 'center',
+                            position: 'absolute',
+                            left: img.x,
+                            top: img.y,
                             zIndex: img.dragging ? 1000 : 1,
-                            transition: img.dragging ? 'none' : 'transform 0.1s',
                             userSelect: 'none',
                         }}
                         onMouseDown={(e) => handleMouseDown(index, e)}
-                    />
+                        draggable
+                        onDragStart={(e) => e.preventDefault()} // Prevent default drag behavior
+                    >
+                        <img
+                            src={img.url}
+                            alt={img.label}
+                            className="rounded"
+                            style={{ width: '100%', height: '100px', objectFit: 'cover' }}
+                        />
+                        <div
+                            className="mt-2 text-red-700 font-semibold"
+                            style={{
+                                transition: 'color 0.3s',
+                            }}
+                        >
+                            {img.label}
+                        </div>
+                    </div>
                 ))}
             </div>
-            <div className="flex justify-center mt-8">
+
+            <div className="flex justify-center gap-4 mb-8">
+                {predefinedGroups.map((group, index) => (
+                    <div
+                        key={index}
+                        className="w-64 h-64 border-2 border-dashed border-gray-400 rounded-lg flex flex-col items-center justify-center"
+                        onDrop={(e) => handleDrop(group, e)}
+                        onDragOver={handleDragOver}
+                    >
+                        <p className="text-xl font-medium">{group}</p>
+                    </div>
+                ))}
+            </div>
+
+            <div className="flex justify-center mt-4">
                 <Button variant="primary" size="medium" onClick={handleSubmitGroups}>
                     Submit Groups
                 </Button>
