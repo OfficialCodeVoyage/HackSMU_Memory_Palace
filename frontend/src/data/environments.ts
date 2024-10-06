@@ -1,3 +1,5 @@
+// frontend/src/data/environments.ts
+
 export interface Environment {
     id: number;
     name: string;

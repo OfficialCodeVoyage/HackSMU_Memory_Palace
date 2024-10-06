@@ -1,3 +1,5 @@
+// frontend/src/components/EnvironmentGrid.tsx
+
 import React from 'react';
 import EnvironmentCard from './EnvironmentCard';
 import { Environment } from '../data/environments';

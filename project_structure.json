@@ -1,0 +1,121 @@
+{
+    "files": [
+        ".gitignore",
+        "project_structure.py",
+        "README.md"
+    ],
+    "backend": {
+        "files": [
+            ".env",
+            ".gitignore",
+            "app.log",
+            "main.py",
+            "test.py"
+        ]
+    },
+    "frontend": {
+        "files": [
+            ".eslintrc.json",
+            ".gitignore",
+            "next-env.d.ts",
+            "next.config.mjs",
+            "package-lock.json",
+            "package.json",
+            "postcss.config.mjs",
+            "README.md",
+            "tailwind.config.ts",
+            "tsconfig.json"
+        ],
+        "public": {
+            "files": [],
+            "images": {
+                "files": [
+                    "farm.png",
+                    "favicon.ico",
+                    "kitchen.png",
+                    "library.png",
+                    "logo.png",
+                    "office.png"
+                ]
+            }
+        },
+        "src": {
+            "files": [],
+            "app": {
+                "files": [
+                    "favicon.ico",
+                    "globals.css",
+                    "layout.tsx",
+                    "page.tsx"
+                ],
+                "about": {
+                    "files": [
+                        "page.tsx"
+                    ]
+                },
+                "displayimages": {
+                    "files": [
+                        "page.tsx"
+                    ]
+                },
+                "environments": {
+                    "files": [],
+                    "[id]": {
+                        "files": [
+                            "page.tsx"
+                        ]
+                    }
+                },
+                "fonts": {
+                    "files": [
+                        "GeistMonoVF.woff",
+                        "GeistVF.woff"
+                    ]
+                },
+                "groupimages": {
+                    "files": [
+                        "page.tsx"
+                    ]
+                },
+                "instruction": {
+                    "files": [
+                        "page.tsx"
+                    ]
+                }
+            },
+            "components": {
+                "files": [
+                    "DisplayImages.tsx",
+                    "EnvironmentCard.tsx",
+                    "EnvironmentGrid.tsx",
+                    "Hero.tsx",
+                    "Spinner.tsx"
+                ],
+                "common": {
+                    "files": [
+                        "Button.tsx",
+                        "ErrorBoundary.tsx",
+                        "Footer.tsx",
+                        "Header.tsx",
+                        "Providers.tsx"
+                    ]
+                }
+            },
+            "context": {
+                "files": [
+                    "AppContext.tsx"
+                ]
+            },
+            "data": {
+                "files": [
+                    "environments.ts"
+                ]
+            },
+            "types": {
+                "files": [
+                    "index.ts"
+                ]
+            }
+        }
+    }
+}

@@ -1,3 +1,5 @@
+// frontend/src/components/EnvironmentCard.tsx
+
 'use client'; // This makes the component a client component
 
 import React from 'react';
@@ -36,7 +38,7 @@ const EnvironmentCard: React.FC<EnvironmentCardProps> = ({ environment }) => {
                 <Link
                     id={`env-link-${environment.id}`}
                     href={`/environments/${environment.id}`}
-                    className="text-blue-500 hover:underline focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
+                    className="text-blue-500 hover:underline focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                 >
                     Select
                 </Link>

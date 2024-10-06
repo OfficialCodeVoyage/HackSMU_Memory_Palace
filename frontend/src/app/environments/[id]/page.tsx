@@ -1,3 +1,5 @@
+// frontend/src/app/environments/[id]/page.tsx
+
 'use client';
 
 import React, { useEffect, useState } from 'react';
@@ -11,6 +13,8 @@ const EnvironmentPage: React.FC = () => {
     const router = useRouter();
     const [input, setInput] = useState<string>('');
     const [submittedWords, setSubmittedWords] = useState<string[]>([]);
+    const [loading, setLoading] = useState<boolean>(false);
+    const [error, setError] = useState<string | null>(null);
 
     const environmentId = Number(id);
     const environment = environments.find((env) => env.id === environmentId);
@@ -39,27 +43,58 @@ const EnvironmentPage: React.FC = () => {
         );
     }
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (input.trim() !== '' && isValidWord(input, environment.name)) {
-            setSubmittedWords((prevWords) => [...prevWords, input.trim()]);
+        if (input.trim() !== '') {
+            // Split input by commas and trim spaces
+            const words = input.split(',').map(word => word.trim()).filter(word => word !== '');
+            if (words.length === 0) {
+                alert('Please enter at least one valid word.');
+                return;
+            }
+            setSubmittedWords((prevWords) => [...prevWords, ...words]);
             setInput('');
-        } else {
-            alert('Please enter a valid word related to the environment.');
+            await sendWordsToBackend(words);
         }
     };
 
-    // Simple word validation (this can be extended further)
-    const isValidWord = (word: string, environmentName: string): boolean => {
-        const validWords = {
-            Kitchen: ['knife', 'refrigerator', 'spoon', 'oven'],
-            Farm: ['tractor', 'cow', 'barn', 'hay'],
-            Library: ['book', 'shelf', 'lamp', 'table'],
-            Office: ['computer', 'desk', 'chair', 'printer'],
-        };
+    const sendWordsToBackend = async (words: string[]) => {
+        setLoading(true);
+        setError(null);
+        try {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    words: words,
+                }),
+            });
 
-        const normalizedWord = word.toLowerCase().trim();
-        return validWords[environmentName as keyof typeof validWords]?.includes(normalizedWord) ?? false;
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Something went wrong.');
+            }
+
+            const data = await response.json();
+            // Extract image URLs from data.categories
+            const imageUrls: string[] = [];
+            data.categories.forEach((category: any) => {
+                Object.values(category.images).forEach((url: string) => {
+                    if (url) imageUrls.push(url);
+                });
+            });
+            // Store image URLs in localStorage
+            localStorage.setItem('generatedImages', JSON.stringify(imageUrls));
+            // Navigate to displayimages page
+            router.push('/displayimages');
+        } catch (err: any) {
+            console.error(err);
+            setError(err.message || 'An error occurred.');
+        } finally {
+            setLoading(false);
+        }
     };
 
     return (
@@ -76,33 +111,23 @@ const EnvironmentPage: React.FC = () => {
             </div>
             <form onSubmit={handleSubmit} className="w-full max-w-md mt-6">
                 <label htmlFor="word-input" className="block text-lg font-medium mb-2">
-                    Type a word related to {environment.name}:
+                    Type words related to {environment.name} (separated by commas):
                 </label>
                 <input
                     type="text"
                     id="word-input"
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
-                    placeholder={`e.g., Knife, Refrigerator`}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder={`e.g., Fork, Spoon, Banana`}
                     required
                 />
                 <Button variant="primary" size="medium" type="submit" className="mt-4 w-full">
                     Submit
                 </Button>
             </form>
-            {submittedWords.length > 0 && (
-                <div className="w-full max-w-md mt-6">
-                    <h2 className="text-2xl font-semibold mb-2">Your Words:</h2>
-                    <ul className="list-disc list-inside">
-                        {submittedWords.map((word, index) => (
-                            <li key={index} className="text-lg">
-                                {word}
-                            </li>
-                        ))}
-                    </ul>
-                </div>
-            )}
+            {loading && <p className="mt-4 text-blue-500">Processing...</p>}
+            {error && <p className="mt-4 text-red-500">{error}</p>}
         </div>
     );
 };

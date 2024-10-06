@@ -1,4 +1,4 @@
-// my-project/src/types/index.ts
+// frontend/src/types/index.ts
 
 export interface Environment {
     id: number;

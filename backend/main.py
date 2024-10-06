@@ -1,5 +1,6 @@
 import openai
 from flask import Flask, request, jsonify, send_from_directory
+from flask_cors import CORS
 from together import Together
 import base64
 import json
@@ -8,6 +9,7 @@ import logging
 from io import BytesIO
 from PIL import Image
 import dotenv
+
 
 # logging
 logging.basicConfig(
@@ -24,10 +26,11 @@ os.environ.pop('OPENAI_API_KEY', None)
 os.environ.pop('TOGETHER_API_KEY', None)
 dotenv.load_dotenv()
 openai.api_key = os.getenv("OPENAI_API_KEY")
-together_client = Together(api_key="os.getenv('TOGETHER_API_KEY')")
+together_client = Together(api_key="#")
 
 
 app = Flask(__name__)
+CORS(app)
 
 
 system_message = {"role": "system", "content": "You are an intelligent assistant."}
@@ -174,4 +177,5 @@ def serve_image(filename):
 
 
 if __name__ == '__main__':
+
     app.run(debug=False)

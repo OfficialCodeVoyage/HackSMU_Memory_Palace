@@ -1,7 +1,7 @@
 // frontend/src/context/AppContext.tsx
 
 import React, { createContext, useState, ReactNode } from 'react';
-import { Environment } from '../types'; // Correct path after moving
+import { Environment } from '../types'; // Ensure correct path
 
 interface AppContextProps {
     selectedEnvironment: Environment | null;
