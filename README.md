@@ -1,3 +1,7 @@
+![Alt text](pictures/1.png)
+![Alt text](pictures/3.png)
+![Alt text](pictures/4.png)
+![Alt text](pictures/5.png)
 # Memory Palace: A Digital Tool for Memory Retention
 
 ## Inspiration
