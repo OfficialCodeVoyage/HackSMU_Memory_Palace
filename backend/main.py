@@ -35,12 +35,12 @@ system_message = {"role": "system", "content": "You are an intelligent assistant
 def categorize_and_generate_images():
     if request.method == "POST":
         try:
-            #get words from the request
+            # Get words from the request
             words = request.json.get("words")
             if not words:
                 return jsonify({"error": "No words provided."}), 400
 
-
+            # Prepare the message for categorization
             message = f"""
             Please cluster the words into categories. Assign a name to each category.
             Your response should be formatted as a JSON array, where each item represents a category.
@@ -62,7 +62,7 @@ def categorize_and_generate_images():
                 "content": message
             }
 
-            # categorization
+            # Categorization
             messages = [system_message, categorize_message]
             chat = openai.ChatCompletion.create(
                 model="gpt-4",
@@ -72,7 +72,6 @@ def categorize_and_generate_images():
 
             reply_data = json.loads(reply)
 
-
             categories_list = []
             for category_dict in reply_data:
                 for category_name, words_list in category_dict.items():
@@ -81,14 +80,11 @@ def categorize_and_generate_images():
                         "words": words_list
                     })
 
-
             num_categories = len(categories_list)
             if num_categories == 0:
                 return jsonify({"error": "No categories found after clustering."}), 400
 
-
             images_per_category = math.ceil(8 / num_categories)
-
 
             for category in categories_list:
                 category_name = category['category']
@@ -121,15 +117,13 @@ def categorize_and_generate_images():
                 else:
                     category['all_words'] = original_words
 
-
                 category['all_words'] = category['all_words'][:images_per_category]
 
-            #Generateimages
+            # Generate images
             categories_images = category_images(categories_list)
 
-            #Collect all images
+            # Collect all images
             total_images = sum(len(cat['images']) for cat in categories_images.values())
-
 
             if total_images > 8:
                 images_to_remove = total_images - 8
@@ -138,7 +132,6 @@ def categorize_and_generate_images():
                         removed_word = next(iter(category['images']))
                         del category['images'][removed_word]
                         images_to_remove -= 1
-
 
             response_data = []
             for category in categories_images:
@@ -168,13 +161,13 @@ def category_images(categories_data):
         categories[category] = {"words": words, "images": {}}
 
         for word in words:
-            prompt = f"Minimal background, centered {word} with high resolution and detailed close-up."
+            prompt = f"Generate an image with a minimal background. Focus on a centered, high-resolution close-up of '{word}'. The image should emphasize fine details, vivid colors, and an aesthetically pleasing composition. Ensure the background is simple, with the primary focus entirely on the {word} itself, with a slight shadow for depth."
 
             try:
                 # Together API to generate image
                 response = together_client.images.generate(
                     prompt=prompt,
-                    model="black-forest-labs/FLUX.1-pro",
+                    model="black-forest-labs/FLUX.1.1-pro",
                     steps=10,
                     n=1,
                     height=512,
