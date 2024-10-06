@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@next/font": "^14.2.14",
+    "axios": "^1.7.7",
     "classnames": "^2.5.1",
     "next": "14.2.14",
     "react": "^18",
