@@ -23,7 +23,7 @@ logging.basicConfig(
 )
 
 dotenv.load_dotenv()
-openai.api_key = #get your own)
+openai.api_key = "#"
 together_client = Together(api_key="#")
 
 app = Flask(__name__)
