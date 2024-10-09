@@ -1,4 +1,4 @@
-## YouTybe video overview - https://www.youtube.com/watch?v=h4L9kmJkXlg
+## YouTube video overview - https://www.youtube.com/watch?v=h4L9kmJkXlg
 
 ![Alt text](pictures/1.png)
 ![Alt text](pictures/3.png)
